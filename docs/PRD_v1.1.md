@@ -22,6 +22,7 @@
 | refund_amount_correct | năng lực | ≥ 0.95 và không giảm có ý nghĩa | có | 0.9857 |
 | pass_rate | năng lực | ≥ 0.85 và không giảm có ý nghĩa | có | 0.9857 |
 | db_fact_kept | năng lực (mức bước) | ≥ 0.95 | không (cảnh báo) | 0.9857 |
+| proposal_correct (FM-04/05) | năng lực (quyết định) | ≥ 0.95 | không (chẩn đoán) | 0.9857 |
 | pass_5, cost_per_success | theo dõi | pass_5 ≥ 0.80; cost tăng ≤ 10% | không | 0.9286; 49.567 |
 | reply_amount_matches_ledger (FM-08) | năng lực | = 1.0 và không giảm có ý nghĩa | có | 1.0 |
 

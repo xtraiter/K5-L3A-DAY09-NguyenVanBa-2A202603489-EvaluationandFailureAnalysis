@@ -15,6 +15,7 @@ Card này đi kèm mỗi báo cáo và được dùng lại ở Day 10. Mọi s�
 | pass_rate | capability | `lab8.metrics.trial_pass` | min 0.85 + không giảm có ý nghĩa | có |
 | reply_amount_matches_ledger (FM-08) | capability | code `ReplyMatchesLedger` (số tiền trong reply = ledger) | min 1.0 + không giảm có ý nghĩa | có |
 | db_fact_kept | capability (bước) | code `DbFactKept` | min 0.95 | không |
+| proposal_correct (FM-04/05) | capability (quyết định) | code `ProposalCorrect` (đề xuất của agent = nhãn `proposal_amount`) | min 0.95 | không (chẩn đoán) |
 | pass_5, cost_per_success | theo dõi | `lab8.metrics` | min 0.80 / tăng ≤ 10% | không |
 
 - **Kết quả baseline vs PR** (Δ = PR − baseline, CI 95% paired bootstrap trên 14 item, 1000 resample, rng 2027):
@@ -43,3 +44,40 @@ Card này đi kèm mỗi báo cáo và được dùng lại ở Day 10. Mọi s�
   - Shape `swarm` của Lab 8 không phát event `reply`, nên `reply_amount_matches_ledger` của baseline là 1.0 mặc định; metric chỉ có tác dụng khi shape có reply.
   - Không đo trên người dùng thật.
 - **Khi nào tăng eval-set version:** thêm item (ví dụ từ trace case với `provenance.from_trace`, hoặc adversarial pack → v2), đổi nhãn (như sửa H-081 ở bộ judge), hay đổi cách gán `failure_modes` → tăng `eval_set_version`, chạy lại baseline trên `main`; cùng version thì ngưỡng chỉ được chặt hơn (ratchet).
+
+---
+
+## v2 (Advanced/Expert, M5–M7)
+
+- **Run ID / eval set:** baseline `E-swarm-20261117-4a3e` (`reports/baseline_v2.json`) · eval set v2 sha `4a3edb8bb5db` = 14 item v1 + 14 item adversarial (`data/eval/adversarial_v2.json`), 28 × 5 seed · metric_spec `2.0` (`config/metric_spec_v2.yaml`).
+- **fm_map** (`config/fm_map.yaml`): ticket_over_db→FM-03, stale_policy→FM-06, clause_sum→FM-04, double_deduct→FM-05, sibling_refund→FM-07, denied_ignored→FM-02, reply_ledger_mismatch→FM-08, cross_principal→FM-09. Số item/FM trong v2: FM-02 4, FM-03 4, FM-04 10, FM-05 6, FM-06 3, FM-07 5, FM-08 4, FM-09 4 (đều ≥ 3); `evalset --v2` 0 problem.
+- **Baseline v2:** pass_rate 0.9786 · pass_hat_5 0.8929 · pass_at_5 1.0 · refund_amount_correct 0.9786 · reply_amount_matches_ledger 1.0 · slice money_movement 1.0 / adversarial 0.971 / denial 0.945. Ba item fail ở seed 55 (E-002, E-101, E-102: swarm tin ticket khi `seed % 5 == 0`).
+
+### Ngưỡng chọn từ A/A
+`python -m lab9.mutation --spec config/metric_spec_v2.yaml --aa 66,77,88,99,110`: **Δ = 0.0000 trên mọi metric** (pass_rate, pass_hat_5, pass_hat_3, slices…). MockLLM tất định và lỗi của swarm phụ thuộc `seed % 5`; bộ seed thứ hai cũng có đúng một seed chia hết cho 5 (110), nên hai bộ seed cho cùng kết quả.
+- `pass_hat_5` **min 0.85, blocking**: dưới baseline 0.8929 (A/A Δ 0 ⇒ dải nhiễu bằng 0, honest PR không bị chặn ngẫu nhiên), trên mức của `flaky_regression` (0.5714). Sàn ≥ 0.8 theo yêu cầu.
+- Với LLM thật, A/A sẽ có Δ ≠ 0 (sampling, nhiệt độ, thay đổi phía nhà cung cấp): phải chạy A/A nhiều lần, lấy dải nhiễu (ví dụ phân vị 95% của |Δ|) và đặt sàn **ngoài** dải đó; sàn nằm trong dải nhiễu sẽ chặn PR trung thực một cách ngẫu nhiên.
+
+### Slice nào bắt lỗi nào (scorecard `lab9.mutation`: **3/3 regression bị chặn, 0 báo nhầm**)
+
+| Variant | pass_rate (CI Δ) | Bị chặn bởi | Kết quả |
+|---|---|---|---|
+| fixed | 1.0 | — | merge ✓ |
+| honest_refactor | 1.0 | — | merge ✓ |
+| seeded_regression | 0.6429 | mọi metric năng lực + 3 slice + new_failures | block ✓ |
+| slice_regression | **0.9357** (Δ −0.043, CI [−0.121, +0.029]: trên sàn, CI chạm 0) | `slice:money_movement/pass_rate` 0.85, `slice:money_movement/refund_amount_correct` 0.85, `new_failures` (E-014, E-105, E-106) | block ✓ |
+| flaky_regression | 0.9143 | **`pass_hat_5` 0.5714**, slice money_movement 0.8667, `new_failures` (12 item) | block ✓ |
+
+- `money_movement` (12 item có `refund_vnd > 0`): bắt lỗi cộng điều khoản / làm tròn chỉ xảy ra trên claim có hoàn tiền. `refund_amount_correct` trong slice này có sàn **1.0**: tiền đã chuyển phải đúng tuyệt đối (baseline, fixed, honest_refactor đều 1.0; A/A Δ 0).
+- `adversarial` (14 item pack) và `denial` (11 item): bắt prompt injection, ticket đè DB, clause cũ, bỏ qua từ chối.
+- `no_new_failures` (pass_rate): item pass đủ 5/5 seed ở baseline không được fail ở PR. Cần cho trường hợp PR sửa vài item và làm hỏng đúng số item khác (ví dụ lỗi `stale_clause` ở 1/5 seed: mọi trung bình, pass_hat_5 và slice **trùng hệt** baseline, chỉ khác *item nào* fail).
+- Kiểm tra thêm ngoài scorecard công khai (24 variant tự dựng từ công tắc lỗi, gồm `quiet_override`, `misreport`, `intermittent`/`rare` × mỗi lỗi, `paraphrase`/`extra_lookup` trung thực): tất cả đúng quyết định.
+
+### Chống gian lận eval (M7)
+`python -m lab9.traps --pr reports/eval_slice_regression.json --baseline reports/baseline_v2.json --spec config/metric_spec_v2.yaml` → 4/4 trap **blocked** với lý do `INTEGRITY` (`evaluator_errors_as_nan`: dòng có grade None; `dropped_failing_rows`: 131 ≠ 140 dòng; `cherry_picked_seeds`: tập (item, seed) và seeds khác baseline; `loosened_spec`: ratchet). `integrity_check` còn chặn: dòng trùng lặp (kể cả khi tổng số dòng vẫn đúng), `evaluator_failures` trên run xanh, giá trị grade không phải bool, metric khai báo khác giá trị tính lại từ rows, nhãn slice khác baseline, đổi `eval_set_version` để né ratchet trên cùng eval set, bỏ slice / `no_new_failures` / `pass_k`. Baseline so với chính nó (kể cả với `--base-spec`) vẫn merge.
+Trap có thể còn lọt: report được **tạo lại hoàn toàn nhất quán** (rows, metrics, manifest đều khớp) từ một agent khác với agent trong PR — gate chỉ kiểm report, không chứng minh report đến từ đúng commit; cần CI tự chạy eval (job `eval-gate` làm vậy) thay vì tin report nộp kèm.
+
+### Giới hạn cỡ mẫu
+- Bug chỉ xuất hiện ở 1/3 seed (`rare`: seed chia hết cho 3) chỉ chạm **1 trong 5 seed** spec (33), và có thể **0** seed với bộ seed khác: không phát hiện ổn định được với 5 seed. Không hạ ngưỡng để "bắt" nó (hạ ngưỡng chỉ làm gate báo nhầm); cách đúng là thêm seed/item.
+- 28 item: CI của slice vẫn rộng (money_movement ±0.15); slice gate dựa vào sàn nhiều hơn vào CI.
+- `no_new_failures` dựa vào việc MockLLM tất định; với LLM thật cần cho phép dung sai (ví dụ yêu cầu lỗi mới lặp lại ở ≥ 2 seed) để không báo nhầm do nhiễu.
