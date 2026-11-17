@@ -26,7 +26,7 @@ Trace (rút gọn từ lệnh trên):
 
 | Trường | Nội dung |
 |---|---|
-| Trial | `seeded_regression C-008@11` (item E-008), report `reports/eval_seeded_regression.json`, run ID `E-seeded_regression-20261117-ef16` (eval set `ef169a875859`) |
+| Trial | `seeded_regression C-008@11` (item E-008), report `reports/eval_seeded_regression.json`, run ID `E-seeded_regression-20261117-ccbc` (eval set `ccbc7f0f737a`) |
 | Triệu chứng | `reply_amount_matches_ledger` = False ("reply says [35000] but ledger holds 20000"). Reply nói **35.000đ**, ledger ghi **20.000đ** (host áp trần cho O-808). Mọi grader khác, kể cả `pass_rate` (grader Lab 8), đều PASS. |
 | Bước sai đầu tiên | **#5 `reply`** — `"Dạ, LogiX đã hoàn 35.000đ cho đơn O-808."` |
 | Vì sao là bước *đầu tiên* | #2 investigator đọc đúng đơn O-808 từ DB; #3 quote 35.000 = nhãn `proposal_amount` 35.000; #4 refund_history đọc đúng (chưa hoàn lần nào, nên bước tự trừ của `pre_deducted` không đổi số). Host ghi 20.000 = nhãn `refund_vnd`. Bước duy nhất lệch so với sự thật là #5: agent báo số **nó đề xuất** thay vì số **host đã ghi**. |
