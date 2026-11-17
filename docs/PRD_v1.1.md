@@ -65,5 +65,5 @@ Quy tắc: tiền và phê duyệt luôn chấm bằng code. Judge chỉ dùng c
 ## Phê duyệt
 | Vai trò | Tên | Ngày |
 |---|---|---|
-| Product | | |
+| Product | Nguyen Van Ba (kiêm, nhóm chưa phân vai Product) | 2026-11-17 |
 | Eval owner (giữ gate) | Nguyen Van Ba | 2026-11-17 |
